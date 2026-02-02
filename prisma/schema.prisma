@@ -1,0 +1,244 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Auth Models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// User Model
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Subscription
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  stripePriceId        String?
+  stripeCurrentPeriodEnd DateTime?
+
+  // Relations
+  accounts         Account[]
+  sessions         Session[]
+  workouts         Workout[]
+  workoutTemplates WorkoutTemplate[]
+  streaks          Streak[]
+  goals            Goal[]
+}
+
+// Exercise Library
+model Exercise {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  muscleGroup MuscleGroup
+  equipment   Equipment?
+  difficulty  Difficulty @default(BEGINNER)
+  instructions String?  @db.Text
+  videoUrl    String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  workoutExercises    WorkoutExercise[]
+  templateExercises   TemplateExercise[]
+
+  @@unique([name, muscleGroup])
+}
+
+enum MuscleGroup {
+  CHEST
+  BACK
+  SHOULDERS
+  BICEPS
+  TRICEPS
+  LEGS
+  CORE
+  GLUTES
+  CARDIO
+  FULL_BODY
+}
+
+enum Equipment {
+  BARBELL
+  DUMBBELL
+  MACHINE
+  CABLE
+  BODYWEIGHT
+  KETTLEBELL
+  RESISTANCE_BAND
+  CARDIO_MACHINE
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+// Workout Logging
+model Workout {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  notes       String?  @db.Text
+  duration    Int?     // in minutes
+  caloriesBurned Int?
+  completedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises WorkoutExercise[]
+
+  @@index([userId, completedAt])
+}
+
+model WorkoutExercise {
+  id         String  @id @default(cuid())
+  workoutId  String
+  exerciseId String
+  order      Int     @default(0)
+
+  workout  Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+  sets     ExerciseSet[]
+
+  @@index([workoutId])
+}
+
+model ExerciseSet {
+  id                String  @id @default(cuid())
+  workoutExerciseId String
+  setNumber         Int
+  reps              Int?
+  weight            Float?  // in lbs or kg
+  duration          Int?    // in seconds (for timed exercises)
+  distance          Float?  // in miles or km (for cardio)
+  completed         Boolean @default(true)
+  notes             String?
+
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+
+  @@index([workoutExerciseId])
+}
+
+// Workout Templates
+model WorkoutTemplate {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?  @db.Text
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises TemplateExercise[]
+
+  @@index([userId])
+}
+
+model TemplateExercise {
+  id         String @id @default(cuid())
+  templateId String
+  exerciseId String
+  order      Int    @default(0)
+  sets       Int    @default(3)
+  reps       Int?
+  weight     Float?
+  duration   Int?
+  notes      String?
+
+  template WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  exercise Exercise        @relation(fields: [exerciseId], references: [id])
+
+  @@index([templateId])
+}
+
+// Streak Tracking
+model Streak {
+  id            String   @id @default(cuid())
+  userId        String
+  currentStreak Int      @default(0)
+  longestStreak Int      @default(0)
+  lastWorkoutAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+}
+
+// Goals
+model Goal {
+  id          String   @id @default(cuid())
+  userId      String
+  type        GoalType
+  target      Float
+  current     Float    @default(0)
+  unit        String
+  deadline    DateTime?
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum GoalType {
+  WORKOUT_COUNT
+  WEIGHT_LIFTED
+  DISTANCE
+  CALORIES
+  STREAK
+  CUSTOM
+}

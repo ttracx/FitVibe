@@ -6,12 +6,34 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "npx tsx prisma/seed.ts",
+    "stripe:setup": "npx tsx scripts/create-stripe-product.ts"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.1",
+    "@prisma/client": "^6",
+    "@stripe/stripe-js": "^8.7.0",
+    "@tanstack/react-query": "^5.90.20",
+    "@types/bcryptjs": "^3.0.0",
+    "bcryptjs": "^3.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.2.3",
+    "lucide-react": "^0.563.0",
     "next": "16.1.6",
+    "next-auth": "5.0.0-beta.30",
+    "openai": "^6.17.0",
+    "prisma": "^6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "recharts": "^3.7.0",
+    "stripe": "^20.3.0",
+    "tailwind-merge": "^3.4.0",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -21,6 +43,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
